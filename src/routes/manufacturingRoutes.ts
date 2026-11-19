@@ -14,7 +14,7 @@ export function createManufacturingRoutes(
     "/machines/:machineId/events",
     controller.getMachineEventsByMachine,
   );
-
+  router.get("/events", controller.getAllEvents);
   router.get("/production/status", controller.getProductionStatus);
 
   return router;

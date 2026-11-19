@@ -26,12 +26,11 @@ describe("Manufacturing REST Routes", () => {
       res.json([
         {
           machineId: "Washer",
-          property: "spindle",
-          value: 1500,
+          values: { state: "Running", spindle: 1500 },
         },
       ]);
     }),
-
+    getAllEvents: vi.fn((req, res) => res.json([])),
     getProductionStatus: vi.fn((_req, res) => {
       res.json({
         totalMachines: 2,
@@ -75,7 +74,7 @@ describe("Manufacturing REST Routes", () => {
     const response = await request(app).get("/api/machines/Washer/events");
 
     expect(response.status).toBe(200);
-    expect(response.body[0].value).toBe(1500);
+    expect(response.body[0].values.spindle).toBe(1500);
     expect(controller.getMachineEventsByMachine).toHaveBeenCalled();
   });
 

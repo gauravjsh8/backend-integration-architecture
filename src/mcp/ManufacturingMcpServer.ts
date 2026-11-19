@@ -18,7 +18,9 @@ const propertySchema = z
   .min(1)
   .max(50)
   .regex(/^[A-Za-z0-9_]+$/, "Property name contains invalid characters.")
-  .describe("The property name, for example spindle, state or processTime.");
+  .describe(
+    "The property name, for example busyPercentage, partsCurrent, brokenPercentage, state or processTime.",
+  );
 
 const DEFAULT_EVENT_LIMIT = 20;
 
@@ -34,7 +36,7 @@ export function createManufacturingMcpServer(
     "get_machine_events",
     {
       description:
-        "Retrieve recent historical machine events from the database. Read-only.",
+        "Retrieve recent historical machine events from the database.Each event is one snapshot of all values of a machine, saved when its state changed. Read-only.",
       inputSchema: z.object({
         machineId: machineIdSchema.optional(),
         limit: z
@@ -95,7 +97,7 @@ export function createManufacturingMcpServer(
     "get_machine_property",
     {
       description:
-        "Retrieve the latest stored historical value of a specific property from a manufacturing machine. Read-only.",
+        "Retrieve the latest stored historical value of a specific property from a manufacturing machine. Values are stored only when the machine state changes, so for current values use get_machine_status. Read-only.",
       inputSchema: z.object({
         machineId: machineIdSchema,
         property: propertySchema,
@@ -117,6 +119,22 @@ export function createManufacturingMcpServer(
               : `Property '${property}' was not found for machine '${machineId}'.`,
           },
         ],
+      };
+    },
+  );
+  server.registerTool(
+    "get_production_status",
+    {
+      description:
+        "Retrieve a summary of the current production: the number of machines, how many are in each state, and the state of each machine. Read-only.",
+      inputSchema: z.object({}),
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const status = await manufacturingService.getProductionStatus();
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
       };
     },
   );

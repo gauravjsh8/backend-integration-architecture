@@ -1,5 +1,5 @@
 import { Machine } from "../interfaces/Machine";
-import { MachineEvent } from "../interfaces/MachineEvent";
+import { MachineEvent, EventValue } from "../interfaces/MachineEvent";
 import { MachineDataRequest } from "../interfaces/MachineDataRequest";
 import { ManufacturingDataSource } from "../interfaces/ManufacturingDataSource";
 
@@ -41,23 +41,21 @@ export class VisualComponentAdapter implements ManufacturingDataSource {
     return false;
   }
 
-  private createMachineEvents(
-    machine: Machine,
-    timestamp: Date,
-  ): MachineEvent[] {
+  private createMachineEvents(machine: Machine, timestamp: Date): MachineEvent {
     const { id, type, ...properties } = machine;
+    const values: Record<string, EventValue> = {};
+    for (const [property, value] of Object.entries(properties)) {
+      if (isScalar(value)) {
+        values[property] = value;
+      }
+    }
 
-    return Object.entries(properties)
-      .filter((entry): entry is [string, string | number | boolean] =>
-        isScalar(entry[1]),
-      )
-      .map(([property, value]) => ({
-        source: "VisualComponents",
-        machineId: id,
-        property,
-        value,
-        timestamp,
-      }));
+    return {
+      source: "VisualComponents",
+      machineId: id,
+      timestamp,
+      values,
+    };
   }
 
   updateData(data: MachineDataRequest): MachineEvent[] {
@@ -69,7 +67,7 @@ export class VisualComponentAdapter implements ManufacturingDataSource {
 
       for (const machine of this.machines) {
         if (this.shouldSaveSnapshot(machine)) {
-          events.push(...this.createMachineEvents(machine, timestamp));
+          events.push(this.createMachineEvents(machine, timestamp));
         }
       }
     } else if (data.machineId && data.properties) {
@@ -83,7 +81,7 @@ export class VisualComponentAdapter implements ManufacturingDataSource {
       }
 
       if (this.shouldSaveSnapshot(machine)) {
-        events.push(...this.createMachineEvents(machine, timestamp));
+        events.push(this.createMachineEvents(machine, timestamp));
       }
     }
 

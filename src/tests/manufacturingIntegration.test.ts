@@ -23,7 +23,6 @@ describe("Manufacturing API Integration Tests", () => {
     },
   };
 
-  // The audit log is written after the response, so wait a moment.
   const waitForAuditLog = () =>
     new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -90,6 +89,7 @@ describe("Manufacturing API Integration Tests", () => {
   });
 
   afterAll(async () => {
+    await waitForAuditLog();
     await mongoClient.close();
     await mongoServer.stop();
   });
@@ -117,7 +117,6 @@ describe("Manufacturing API Integration Tests", () => {
 
     expect(submitResponse.status).toBe(200);
 
-    // Then, a viewer retrieves the machines.
     const response = await request(app)
       .get("/api/machines")
       .set("Authorization", `Bearer ${viewerToken}`);
@@ -147,8 +146,6 @@ describe("Manufacturing API Integration Tests", () => {
     expect(response.status).toBe(200);
   });
 
-  // ---------------- Machine data ingestion ----------------
-
   it("should allow the Visual Components client to submit machine data", async () => {
     const response = await request(app)
       .post("/api/machine-data")
@@ -169,7 +166,11 @@ describe("Manufacturing API Integration Tests", () => {
       .find({ machineId: "TEST-MACHINE" })
       .toArray();
 
-    expect(storedEvents.length).toBe(2);
+    expect(storedEvents.length).toBe(1);
+    expect(storedEvents[0].values).toEqual({
+      state: "Running",
+      spindle: 1500,
+    });
   });
 
   it("should deny a viewer access to machine data ingestion", async () => {
@@ -199,8 +200,6 @@ describe("Manufacturing API Integration Tests", () => {
 
     expect(response.status).toBe(403);
   });
-
-  // ---------------- MCP ----------------
 
   it("should reject MCP requests without authentication", async () => {
     const response = await request(app)
@@ -275,15 +274,15 @@ describe("Manufacturing API Integration Tests", () => {
     expect(response.text).toContain("get_machine_events");
     expect(response.text).toContain("get_machine_status");
     expect(response.text).toContain("get_machine_property");
+    expect(response.text).toContain("get_production_status");
   });
 
   it("should execute get_machine_property through MCP", async () => {
     await database.collection("machine_events").insertOne({
       source: "Integration Test",
       machineId: "TEST-MCP-MACHINE",
-      property: "spindle",
-      value: 1500,
       timestamp: new Date(),
+      values: { state: "Running", spindle: 1500 },
     });
 
     await initializeMcp(viewerToken);
@@ -315,9 +314,8 @@ describe("Manufacturing API Integration Tests", () => {
       {
         source: "Integration Test",
         machineId: "TEST-MCP-MACHINE",
-        property: "state",
-        value: "Running",
         timestamp: new Date(),
+        values: { state: "Running", spindle: 1500 },
       },
       {
         source: "Integration Test",
@@ -390,8 +388,6 @@ describe("Manufacturing API Integration Tests", () => {
     expect(response.text).toContain("1500");
     expect(response.text).not.toContain("1200");
   });
-
-  // ---------------- RQ3: controlled access ----------------
 
   it("should reject the Visual Components key on the MCP endpoint", async () => {
     const response = await request(app)
@@ -500,5 +496,75 @@ describe("Manufacturing API Integration Tests", () => {
 
     expect(entry).not.toBeNull();
     expect(entry?.client).toBe("anonymous");
+  });
+
+  it("should return the newest events of all machines with a limit", async () => {
+    await database.collection("machine_events").insertMany([
+      {
+        source: "Integration Test",
+        machineId: "MACHINE-A",
+        timestamp: new Date("2026-11-01T10:00:00Z"),
+        values: { state: "Idle" },
+      },
+      {
+        source: "Integration Test",
+        machineId: "MACHINE-B",
+        timestamp: new Date("2026-11-01T10:01:00Z"),
+        values: { state: "Busy" },
+      },
+      {
+        source: "Integration Test",
+        machineId: "MACHINE-A",
+        timestamp: new Date("2026-11-01T10:02:00Z"),
+        values: { state: "Blocked" },
+      },
+    ]);
+
+    const response = await request(app)
+      .get("/api/events?limit=2")
+      .set("Authorization", `Bearer ${viewerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(2);
+
+    expect(response.body[0].values.state).toBe("Blocked");
+    expect(response.body[1].machineId).toBe("MACHINE-B");
+  });
+
+  it("should use a default limit of 20 on /api/events", async () => {
+    const events = Array.from({ length: 25 }, (_, i) => ({
+      source: "Integration Test",
+      machineId: "MACHINE-A",
+      timestamp: new Date(Date.UTC(2026, 10, 1, 10, i)),
+      values: { state: "Busy", partsExited: i },
+    }));
+    await database.collection("machine_events").insertMany(events);
+
+    const response = await request(app)
+      .get("/api/events")
+      .set("Authorization", `Bearer ${viewerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(20);
+  });
+
+  it("should reject an invalid limit on /api/events", async () => {
+    const tooBig = await request(app)
+      .get("/api/events?limit=500")
+      .set("Authorization", `Bearer ${viewerToken}`);
+    expect(tooBig.status).toBe(400);
+
+    const notANumber = await request(app)
+      .get("/api/events?limit=abc")
+      .set("Authorization", `Bearer ${viewerToken}`);
+    expect(notANumber.status).toBe(400);
+  });
+
+  it("should reject the Visual Components key on /api/events", async () => {
+    const response = await request(app)
+      .get("/api/events")
+      .set("x-api-key", VC_KEY);
+
+    expect(response.status).toBe(403);
   });
 });

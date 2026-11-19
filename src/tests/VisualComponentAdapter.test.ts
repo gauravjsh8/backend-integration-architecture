@@ -20,21 +20,14 @@ describe("VisualComponentAdapter", () => {
       ],
     });
 
-    expect(events).toHaveLength(2);
+    expect(events).toHaveLength(1);
 
-    expect(events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          machineId: "VF-1 2",
-          property: "state",
-          value: "Busy",
-        }),
-        expect.objectContaining({
-          machineId: "VF-1 2",
-          property: "spindle",
-          value: 200,
-        }),
-      ]),
+    expect(events[0]).toEqual(
+      expect.objectContaining({
+        source: "VisualComponents",
+        machineId: "VF-1 2",
+        values: { state: "Busy", spindle: 200 },
+      }),
     );
   });
 
@@ -64,7 +57,7 @@ describe("VisualComponentAdapter", () => {
     expect(events).toHaveLength(0);
   });
 
-  it("should save all properties when the machine state changes", () => {
+  it("should save all properties in one event when the machine state changes", () => {
     adapter.updateData({
       resources: [
         {
@@ -87,21 +80,12 @@ describe("VisualComponentAdapter", () => {
       ],
     });
 
-    expect(events).toHaveLength(2);
-
-    expect(events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          machineId: "VF-1 2",
-          property: "state",
-          value: "Blocked",
-        }),
-        expect.objectContaining({
-          machineId: "VF-1 2",
-          property: "spindle",
-          value: 400,
-        }),
-      ]),
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual(
+      expect.objectContaining({
+        machineId: "VF-1 2",
+        values: { state: "Blocked", spindle: 400 },
+      }),
     );
   });
 
@@ -140,8 +124,8 @@ describe("VisualComponentAdapter", () => {
       ],
     });
 
-    expect(events.length).toBeGreaterThan(0);
-    expect(events.every((event) => event.machineId === "Washer")).toBe(true);
+    expect(events).toHaveLength(1);
+    expect(events[0].machineId).toBe("Washer");
   });
   it("should update current machine information even when the state has not changed", async () => {
     adapter.updateData({
@@ -167,9 +151,7 @@ describe("VisualComponentAdapter", () => {
     });
 
     const currentMachine = await adapter.getMachineStatus("VF-1 2");
-
     expect(events).toHaveLength(0);
-
     expect(currentMachine?.state).toBe("Busy");
     expect(currentMachine?.spindle).toBe(300);
   });

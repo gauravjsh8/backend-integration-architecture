@@ -18,30 +18,21 @@ describe("MachineEventRepository", () => {
       {
         source: "Test",
         machineId: "Washer",
-        property: "state",
-        value: "Idle",
         timestamp: earlier,
+        values: { state: "Idle", spindle: 1000 },
       },
       {
         source: "Test",
         machineId: "Washer",
-        property: "state",
-        value: "Running",
         timestamp: later,
+        values: { state: "Running", spindle: 1500 },
       },
-      {
-        source: "Test",
-        machineId: "Washer",
-        property: "spindle",
-        value: 1500,
-        timestamp: later,
-      },
+
       {
         source: "Test",
         machineId: "CMM",
-        property: "state",
-        value: "Busy",
         timestamp: later,
+        values: { state: "Busy" },
       },
     ];
   }
@@ -67,10 +58,10 @@ describe("MachineEventRepository", () => {
   it("should return only the events of one machine, newest first", async () => {
     const events = await repository.getByMachine("Washer");
 
-    expect(events).toHaveLength(3);
+    expect(events).toHaveLength(2);
     expect(events.every((event) => event.machineId === "Washer")).toBe(true);
     expect(events[0].timestamp.getTime()).toBe(later.getTime());
-    expect(events[2].timestamp.getTime()).toBe(earlier.getTime());
+    expect(events[1].timestamp.getTime()).toBe(earlier.getTime());
   });
 
   it("should respect the limit for one machine", async () => {
@@ -86,14 +77,26 @@ describe("MachineEventRepository", () => {
   });
 
   it("should find the latest value of a property without case sensitivity", async () => {
-    const event = await repository.findLatestProperty("Washer", "STATE");
-
-    expect(event?.value).toBe("Running");
+    const result = await repository.findLatestProperty("Washer", "STATE");
+    expect(result?.property).toBe("state");
+    expect(result?.value).toBe("Running");
+    expect(result?.timestamp.getTime()).toBe(later.getTime());
   });
 
   it("should return null for a missing property", async () => {
     const event = await repository.findLatestProperty("Washer", "temperature");
 
     expect(event).toBeNull();
+  });
+  it("should save all values of a machine in one document", async () => {
+    const events = await repository.getByMachine("Washer", 1);
+
+    expect(events[0].values).toEqual({ state: "Running", spindle: 1500 });
+  });
+
+  it("should return null for a machine without events", async () => {
+    const result = await repository.findLatestProperty("Unknown", "state");
+
+    expect(result).toBeNull();
   });
 });

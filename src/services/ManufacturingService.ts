@@ -1,5 +1,5 @@
 import { Machine } from "../interfaces/Machine";
-import { MachineEvent } from "../interfaces/MachineEvent";
+import { MachineEvent, MachinePropertyValue } from "../interfaces/MachineEvent";
 import { ManufacturingDataSource } from "../interfaces/ManufacturingDataSource";
 import { EventRepository } from "../interfaces/EventRepository";
 export class ManufacturingService {
@@ -30,7 +30,7 @@ export class ManufacturingService {
   async getMachineProperty(
     machineId: string,
     property: string,
-  ): Promise<MachineEvent | null> {
+  ): Promise<MachinePropertyValue | null> {
     return await this.eventRepository.findLatestProperty(machineId, property);
   }
 

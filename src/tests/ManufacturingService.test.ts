@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ManufacturingService } from "../services/ManufacturingService";
 import { ManufacturingDataSource } from "../interfaces/ManufacturingDataSource";
 import { EventRepository } from "../interfaces/EventRepository";
-import { MachineEvent } from "../interfaces/MachineEvent";
+import { MachineEvent, MachinePropertyValue } from "../interfaces/MachineEvent";
 import { Machine } from "../interfaces/Machine";
 
 describe("ManufacturingService", () => {
@@ -30,18 +30,17 @@ describe("ManufacturingService", () => {
     {
       source: "VisualComponents",
       machineId: "Washer",
-      property: "state",
-      value: "Running",
       timestamp: new Date("2026-11-01T11:00:00Z"),
-    },
-    {
-      source: "VisualComponents",
-      machineId: "Washer",
-      property: "spindle",
-      value: 1500,
-      timestamp: new Date("2026-11-01T11:00:00Z"),
+      values: { state: "Running", spindle: 1500 },
     },
   ];
+
+  const samplePropertyValue: MachinePropertyValue = {
+    machineId: "Washer",
+    property: "spindle",
+    value: 1500,
+    timestamp: new Date("2026-11-01T11:00:00Z"),
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,7 +59,7 @@ describe("ManufacturingService", () => {
     mockRepository = {
       getAll: vi.fn().mockResolvedValue(sampleEvents),
       getByMachine: vi.fn().mockResolvedValue(sampleEvents),
-      findLatestProperty: vi.fn().mockResolvedValue(sampleEvents[1]),
+      findLatestProperty: vi.fn().mockResolvedValue(samplePropertyValue),
       saveMany: vi.fn().mockResolvedValue(undefined),
     };
 

@@ -86,9 +86,8 @@ describe("ManufacturingController", () => {
       {
         source: "VisualComponents",
         machineId: "Washer",
-        property: "state",
-        value: "Running",
         timestamp: new Date(),
+        values: { state: "Running", spindle: 1500 },
       },
     ];
 
@@ -99,6 +98,7 @@ describe("ManufacturingController", () => {
 
     expect(manufacturingService.getMachineEventsByMachine).toHaveBeenCalledWith(
       "Washer",
+      20,
     );
     expect(res.json).toHaveBeenCalledWith(events);
   });

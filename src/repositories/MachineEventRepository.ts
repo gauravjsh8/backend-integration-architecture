@@ -1,5 +1,5 @@
 import { Collection, Db } from "mongodb";
-import { MachineEvent } from "../interfaces/MachineEvent";
+import { MachineEvent, MachinePropertyValue } from "../interfaces/MachineEvent";
 import { EventRepository } from "../interfaces/EventRepository";
 
 export class MachineEventRepository implements EventRepository {
@@ -38,13 +38,32 @@ export class MachineEventRepository implements EventRepository {
   async findLatestProperty(
     machineId: string,
     property: string,
-  ): Promise<MachineEvent | null> {
-    return this.collection.findOne(
-      { machineId, property },
+  ): Promise<MachinePropertyValue | null> {
+    const latestEvent = await this.collection.findOne(
+      { machineId },
       {
         sort: { timestamp: -1 },
         collation: { locale: "en", strength: 2 },
       },
     );
+
+    if (!latestEvent) {
+      return null;
+    }
+
+    const propertyName = Object.keys(latestEvent.values).find(
+      (name) => name.toLowerCase() === property.toLowerCase(),
+    );
+
+    if (propertyName === undefined) {
+      return null;
+    }
+
+    return {
+      machineId: latestEvent.machineId,
+      property: propertyName,
+      value: latestEvent.values[propertyName],
+      timestamp: latestEvent.timestamp,
+    };
   }
 }

@@ -1,4 +1,4 @@
-import { MachineEvent } from "./MachineEvent";
+import { MachineEvent, MachinePropertyValue } from "./MachineEvent";
 
 export interface EventRepository {
   saveMany(events: MachineEvent[]): Promise<void>;
@@ -7,5 +7,5 @@ export interface EventRepository {
   findLatestProperty(
     machineId: string,
     property: string,
-  ): Promise<MachineEvent | null>;
+  ): Promise<MachinePropertyValue | null>;
 }

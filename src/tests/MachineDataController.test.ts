@@ -47,9 +47,8 @@ describe("MachineDataController", () => {
       {
         source: "VisualComponents",
         machineId: "Washer",
-        property: "state",
-        value: "Running",
         timestamp: new Date(),
+        values: { state: "Running", spindle: 1500 },
       },
     ];
 
@@ -127,9 +126,8 @@ describe("MachineDataController", () => {
       {
         source: "VisualComponents",
         machineId: "Washer",
-        property: "state",
-        value: "Running",
         timestamp: new Date(),
+        values: { state: "Running" },
       },
     ]);
 
