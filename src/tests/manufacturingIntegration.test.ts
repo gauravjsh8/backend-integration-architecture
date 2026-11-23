@@ -36,10 +36,10 @@ describe("Manufacturing API Integration Tests", () => {
   let operatorToken: string;
   let adminToken: string;
 
-  async function initializeMcp(token: string) {
+  async function initializeMcp() {
     const response = await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${token}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send(initializeBody);
 
@@ -94,8 +94,6 @@ describe("Manufacturing API Integration Tests", () => {
     await mongoServer.stop();
   });
 
-  // ---------------- REST API ----------------
-
   it("should reject requests without authentication", async () => {
     const response = await request(app).get("/api/machines");
 
@@ -108,11 +106,9 @@ describe("Manufacturing API Integration Tests", () => {
       .post("/api/machine-data")
       .set("x-api-key", VC_KEY)
       .send({
-        machineId: "VF-12",
-        properties: {
-          state: "Busy",
-          spindle: 1500,
-        },
+        resources: [
+          { id: "VF-12", type: "machine", state: "Busy", spindle: 1500 },
+        ],
       });
 
     expect(submitResponse.status).toBe(200);
@@ -151,11 +147,14 @@ describe("Manufacturing API Integration Tests", () => {
       .post("/api/machine-data")
       .set("x-api-key", VC_KEY)
       .send({
-        machineId: "TEST-MACHINE",
-        properties: {
-          state: "Running",
-          spindle: 1500,
-        },
+        resources: [
+          {
+            id: "TEST-MACHINE",
+            type: "machine",
+            state: "Running",
+            spindle: 1500,
+          },
+        ],
       });
 
     expect(response.status).toBe(200);
@@ -178,10 +177,7 @@ describe("Manufacturing API Integration Tests", () => {
       .post("/api/machine-data")
       .set("Authorization", `Bearer ${viewerToken}`)
       .send({
-        machineId: "TEST-MACHINE",
-        properties: {
-          state: "Running",
-        },
+        resources: [{ id: "TEST-MACHINE", type: "machine", state: "Running" }],
       });
 
     expect(response.status).toBe(403);
@@ -192,10 +188,9 @@ describe("Manufacturing API Integration Tests", () => {
       .post("/api/machine-data")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        machineId: "ADMIN-TEST-MACHINE",
-        properties: {
-          state: "Idle",
-        },
+        resources: [
+          { id: "ADMIN-TEST-MACHINE", type: "machine", state: "Idle" },
+        ],
       });
 
     expect(response.status).toBe(403);
@@ -235,14 +230,14 @@ describe("Manufacturing API Integration Tests", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should allow an authenticated viewer to access the MCP endpoint", async () => {
+  it("should deny a viewer (JWT user)  to access the MCP endpoint", async () => {
     const response = await request(app)
       .post("/mcp")
       .set("Authorization", `Bearer ${viewerToken}`)
       .set("Accept", "application/json, text/event-stream")
       .send(initializeBody);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
   });
 
   it("should allow MCP access with the MCP API key", async () => {
@@ -257,11 +252,11 @@ describe("Manufacturing API Integration Tests", () => {
   });
 
   it("should list available MCP tools", async () => {
-    await initializeMcp(viewerToken);
+    await initializeMcp();
 
     const response = await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${viewerToken}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send({
         jsonrpc: "2.0",
@@ -285,11 +280,11 @@ describe("Manufacturing API Integration Tests", () => {
       values: { state: "Running", spindle: 1500 },
     });
 
-    await initializeMcp(viewerToken);
+    await initializeMcp();
 
     const response = await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${viewerToken}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send({
         jsonrpc: "2.0",
@@ -326,11 +321,11 @@ describe("Manufacturing API Integration Tests", () => {
       },
     ]);
 
-    await initializeMcp(viewerToken);
+    await initializeMcp();
 
     const response = await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${viewerToken}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send({
         jsonrpc: "2.0",
@@ -354,21 +349,24 @@ describe("Manufacturing API Integration Tests", () => {
       .post("/api/machine-data")
       .set("x-api-key", VC_KEY)
       .send({
-        machineId: "TEST-MCP-MACHINE",
-        properties: {
-          state: "Running",
-          spindle: 1500,
-        },
         timeStamp: "2026-11-01T10:05:00Z",
+        resources: [
+          {
+            id: "TEST-MCP-MACHINE",
+            type: "machine",
+            state: "Running",
+            spindle: 1500,
+          },
+        ],
       });
 
     expect(submitResponse.status).toBe(200);
 
-    await initializeMcp(viewerToken);
+    await initializeMcp();
 
     const response = await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${viewerToken}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send({
         jsonrpc: "2.0",
@@ -412,10 +410,7 @@ describe("Manufacturing API Integration Tests", () => {
       .post("/api/machine-data")
       .set("x-api-key", MCP_KEY)
       .send({
-        machineId: "AI-MACHINE",
-        properties: {
-          state: "Running",
-        },
+        resources: [{ id: "AI-MACHINE", type: "machine", state: "Running" }],
       });
 
     expect(response.status).toBe(403);
@@ -430,11 +425,11 @@ describe("Manufacturing API Integration Tests", () => {
   });
 
   it("should reject invalid MCP tool input", async () => {
-    await initializeMcp(viewerToken);
+    await initializeMcp();
 
     const response = await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${viewerToken}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send({
         jsonrpc: "2.0",
@@ -452,11 +447,11 @@ describe("Manufacturing API Integration Tests", () => {
   });
 
   it("should write an audit log entry for an MCP tool call", async () => {
-    await initializeMcp(viewerToken);
+    await initializeMcp();
 
     await request(app)
       .post("/mcp")
-      .set("Authorization", `Bearer ${viewerToken}`)
+      .set("x-api-key", MCP_KEY)
       .set("Accept", "application/json, text/event-stream")
       .send({
         jsonrpc: "2.0",
@@ -478,7 +473,8 @@ describe("Manufacturing API Integration Tests", () => {
       .findOne({ tool: "get_machine_property" });
 
     expect(entry).not.toBeNull();
-    expect(entry?.client).toBe("viewer1");
+    expect(entry?.client).toBe("mcp-ai-client");
+    expect(entry?.clientType).toBe("ai-client");
     expect(entry?.mcpMethod).toBe("tools/call");
   });
 

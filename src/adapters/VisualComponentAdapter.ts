@@ -62,24 +62,9 @@ export class VisualComponentAdapter implements ManufacturingDataSource {
     const timestamp = data.timeStamp ? new Date(data.timeStamp) : new Date();
     const events: MachineEvent[] = [];
 
-    if (data.resources) {
-      this.machines = data.resources.map((resource) => ({ ...resource }));
+    this.machines = data.resources.map((resource) => ({ ...resource }));
 
-      for (const machine of this.machines) {
-        if (this.shouldSaveSnapshot(machine)) {
-          events.push(this.createMachineEvents(machine, timestamp));
-        }
-      }
-    } else if (data.machineId && data.properties) {
-      let machine = this.machines.find((item) => item.id === data.machineId);
-
-      if (machine) {
-        Object.assign(machine, data.properties);
-      } else {
-        machine = { id: data.machineId, ...data.properties };
-        this.machines.push(machine);
-      }
-
+    for (const machine of this.machines) {
       if (this.shouldSaveSnapshot(machine)) {
         events.push(this.createMachineEvents(machine, timestamp));
       }

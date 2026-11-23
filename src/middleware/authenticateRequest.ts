@@ -60,11 +60,12 @@ export function authenticateRequest(
       const tokenService = new TokenService();
       const user = tokenService.verifyToken(token);
 
-      res.locals.user = { ...user, authMethod: "jwt" };
-      next();
+      res.locals.user = { ...user, authMethod: "jwt", clientType: "user" };
     } catch {
       res.status(401).json({ message: "Invalid or expired JWT token." });
+      return;
     }
+    next();
     return;
   }
 

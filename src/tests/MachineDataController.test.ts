@@ -36,11 +36,9 @@ describe("MachineDataController", () => {
 
   it("should receive and store valid machine data", async () => {
     const payload = {
-      machineId: "Washer",
-      properties: {
-        state: "Running",
-        spindle: 1500,
-      },
+      resources: [
+        { id: "Washer", type: "machine", state: "Running", spindle: 1500 },
+      ],
     };
 
     const events = [
@@ -68,7 +66,7 @@ describe("MachineDataController", () => {
     });
   });
 
-  it("should accept valid resources payload", async () => {
+  it("should return 200 when no state changed (no events to save)", async () => {
     const payload = {
       resources: [
         {
@@ -91,8 +89,7 @@ describe("MachineDataController", () => {
 
   it("should return 400 when machine data is invalid", async () => {
     req.body = {
-      machineId: "",
-      properties: {},
+      resources: [{ id: "", type: "machine", state: "Running" }],
     };
 
     await controller.receiveMachineData(req as Request, res as Response);
@@ -102,7 +99,7 @@ describe("MachineDataController", () => {
     expect(manufacturingService.addMachineEvents).not.toHaveBeenCalled();
   });
 
-  it("should return 400 when neither resources nor valid machine data is provided", async () => {
+  it("should return 400 when resources are missing", async () => {
     req.body = {};
 
     await controller.receiveMachineData(req as Request, res as Response);
@@ -114,10 +111,7 @@ describe("MachineDataController", () => {
 
   it("should return 500 when saving machine events fails", async () => {
     const payload = {
-      machineId: "Washer",
-      properties: {
-        state: "Running",
-      },
+      resources: [{ id: "Washer", type: "machine", state: "Running" }],
     };
 
     req.body = payload;

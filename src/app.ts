@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { Db } from "mongodb";
 import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { toNodeHandler } from "@modelcontextprotocol/node";
@@ -92,7 +92,7 @@ export function createApp(database: Db) {
   app.all(
     "/mcp",
     authenticateRequest,
-    authorizeRole(["viewer", "operator", "admin"], "mcp:access"),
+    authorizeRole([], "mcp:access"),
     (req, res) => {
       void nodeHandler(req, res, req.body);
     },
@@ -101,9 +101,23 @@ export function createApp(database: Db) {
   app.use(
     "/api",
     authenticateRequest,
-    authorizeRole(["viewer", "operator", "admin"], "manufacturing:read"),
+    authorizeRole(["viewer", "operator", "admin"]),
     createManufacturingRoutes(manufacturingController),
   );
-
+  app.use(
+    (
+      err: { type?: string },
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ) => {
+      if (err.type === "entity.parse.failed") {
+        res.status(400).json({ message: "Invalid JSON body." });
+        return;
+      }
+      console.error("Unhandled error:", err);
+      res.status(500).json({ message: "Internal server error." });
+    },
+  );
   return app;
 }

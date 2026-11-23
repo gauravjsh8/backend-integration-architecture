@@ -16,27 +16,18 @@ export class MachineDataController {
 
       if (
         !data ||
-        (!(
-          typeof data.machineId === "string" &&
-          data.machineId.trim() &&
-          data.properties &&
-          typeof data.properties === "object" &&
-          !Array.isArray(data.properties)
-        ) &&
-          !(
-            Array.isArray(data.resources) &&
-            data.resources.every(
-              (resource) =>
-                resource &&
-                typeof resource.id === "string" &&
-                resource.id.trim() &&
-                typeof resource.type === "string",
-            )
-          ))
+        !Array.isArray(data.resources) ||
+        !data.resources.every(
+          (resource) =>
+            resource &&
+            typeof resource.id === "string" &&
+            resource.id.trim() &&
+            typeof resource.type === "string",
+        )
       ) {
         res.status(400).json({
           message:
-            "Invalid machine data. Expected resources or machineId and properties.",
+            "Invalid machine data. Expected a resource list with id and type.",
         });
         return;
       }

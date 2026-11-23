@@ -36,7 +36,7 @@ export function createManufacturingMcpServer(
     "get_machine_events",
     {
       description:
-        "Retrieve recent historical machine events from the database.Each event is one snapshot of all values of a machine, saved when its state changed. Read-only.",
+        "Retrieve recent historical machine events from the database. Each event is one snapshot of all values of a machine, saved when its state changed. Read-only.",
       inputSchema: z.object({
         machineId: machineIdSchema.optional(),
         limit: z

@@ -1,12 +1,10 @@
+type PropertyValue = boolean | number | string | null;
+
 export interface MachineDataRequest {
-  machineId?: string;
-  properties?: {
-    [key: string]: boolean | number | string;
-  };
   timeStamp?: string;
-  resources?: Array<{
+  resources: Array<{
     id: string;
     type: string;
-    [key: string]: boolean | number | string;
+    [key: string]: PropertyValue;
   }>;
 }
